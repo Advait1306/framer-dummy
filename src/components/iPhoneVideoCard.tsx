@@ -1,5 +1,5 @@
 import { motion } from "motion/react"
-import { RefObject } from "react"
+import type { RefObject } from "react"
 
 // Local dev assets (served from public folder)
 const localFrame = "/assets/video-gallery/iPhone 16 Pro.png"
@@ -10,7 +10,7 @@ interface IPhoneVideoCardProps {
   frameSrc?: string
   scale?: number
   index?: number
-  videoRef?: RefObject<HTMLVideoElement>
+  videoRef?: RefObject<HTMLVideoElement | null>
 }
 
 export function IPhoneVideoCard({

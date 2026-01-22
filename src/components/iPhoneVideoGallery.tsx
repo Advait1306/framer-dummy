@@ -1,4 +1,4 @@
-import { motion } from "motion/react"
+import { motion, useInView } from "motion/react"
 import { useState, useRef, useEffect } from "react"
 import { IPhoneVideoCard } from "./iPhoneVideoCard"
 
@@ -28,9 +28,15 @@ export function IPhoneVideoGallery({
   video4 = localVideo,
   video5 = localVideo,
 }: IPhoneVideoGalleryProps) {
-  const [isSpread, setIsSpread] = useState(false)
   const [activeIndex, setActiveIndex] = useState(0)
   const [progress, setProgress] = useState(0)
+
+  // Controller intro animation phases: "circle" | "expanded" | "visible"
+  const [controllerPhase, setControllerPhase] = useState<"circle" | "expanded" | "visible">("circle")
+
+  // Ref for viewport detection
+  const containerRef = useRef<HTMLDivElement>(null)
+  const isInView = useInView(containerRef, { once: true, amount: 0.3 })
 
   // Refs for all 5 video elements
   const videoRef0 = useRef<HTMLVideoElement>(null)
@@ -40,17 +46,19 @@ export function IPhoneVideoGallery({
   const videoRef4 = useRef<HTMLVideoElement>(null)
   const videoRefs = [videoRef0, videoRef1, videoRef2, videoRef3, videoRef4]
 
+  // Refs for card wrappers (for scrolling into view)
+  const cardRef0 = useRef<HTMLDivElement>(null)
+  const cardRef1 = useRef<HTMLDivElement>(null)
+  const cardRef2 = useRef<HTMLDivElement>(null)
+  const cardRef3 = useRef<HTMLDivElement>(null)
+  const cardRef4 = useRef<HTMLDivElement>(null)
+  const cardRefs = [cardRef0, cardRef1, cardRef2, cardRef3, cardRef4]
+
   const cardWidth = 408 * scale
   const videos = [video1, video2, video3, video4, video5]
 
-  // Log refs on every render
-  console.log("[Gallery] Render - refs:", videoRefs.map((r, i) => `${i}:${r.current ? "yes" : "no"}`).join(", "))
-
-  // Control video playback
+  // Control video playback and scroll active card into view
   useEffect(() => {
-    console.log("[Gallery] Playback effect running, isSpread:", isSpread, "activeIndex:", activeIndex)
-    console.log("[Gallery] Refs in effect:", videoRefs.map((r, i) => `${i}:${r.current ? "yes" : "no"}`).join(", "))
-
     videoRefs.forEach((ref, index) => {
       const video = ref.current
       if (!video) {
@@ -58,32 +66,41 @@ export function IPhoneVideoGallery({
         return
       }
 
-      if (isSpread && activeIndex === index) {
+      if (isInView && activeIndex === index) {
         console.log(`[Gallery] Playing video ${index}, src:`, video.src)
         video.currentTime = 0
         video.play()
           .then(() => console.log(`[Gallery] Video ${index} started playing`))
           .catch((e) => console.log(`[Gallery] Play error for video ${index}:`, e))
+
+        // Scroll the active card into view
+        const card = cardRefs[index]?.current
+        if (card) {
+          card.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" })
+        }
       } else {
         video.pause()
         video.currentTime = 0
       }
     })
-  }, [isSpread, activeIndex])
+  }, [isInView, activeIndex])
 
-  // Track progress of active video
+  // Track progress of active video using requestAnimationFrame for smooth updates
   useEffect(() => {
     const video = videoRefs[activeIndex]?.current
     if (!video) return
 
-    const handleTimeUpdate = () => {
+    let animationId: number
+
+    const updateProgress = () => {
       if (video.duration) {
         setProgress(video.currentTime / video.duration)
       }
+      animationId = requestAnimationFrame(updateProgress)
     }
 
-    video.addEventListener("timeupdate", handleTimeUpdate)
-    return () => video.removeEventListener("timeupdate", handleTimeUpdate)
+    animationId = requestAnimationFrame(updateProgress)
+    return () => cancelAnimationFrame(animationId)
   }, [activeIndex])
 
   // Handle video ended - advance to next
@@ -100,6 +117,26 @@ export function IPhoneVideoGallery({
     video.addEventListener("ended", handleEnded)
     return () => video.removeEventListener("ended", handleEnded)
   }, [activeIndex])
+
+  // Controller intro animation sequence - only starts when in view
+  useEffect(() => {
+    if (!isInView) return
+
+    // Phase 1 -> 2: After scale animation completes (0 -> 1.2 -> 1 takes ~600ms)
+    const expandTimer = setTimeout(() => {
+      setControllerPhase("expanded")
+    }, 600)
+
+    // Phase 2 -> 3: After width expansion (~300ms after phase 2)
+    const visibleTimer = setTimeout(() => {
+      setControllerPhase("visible")
+    }, 900)
+
+    return () => {
+      clearTimeout(expandTimer)
+      clearTimeout(visibleTimer)
+    }
+  }, [isInView])
 
   // Initial bunched positions (relative to centerOffset line)
   const initialPositions = [
@@ -119,6 +156,16 @@ export function IPhoneVideoGallery({
     { x: 3 * (cardWidth + gap), y: 0, rotate: 0, zIndex: 1 },
   ]
 
+  // Calculate inner container width to fit all spread cards
+  // Spread goes from -1*(cardWidth+gap) to 3*(cardWidth+gap), plus half card on each side
+  const innerWidth = 5 * cardWidth + 4 * gap
+
+  // Controller dimensions for intro animation
+  // Height: indicator (10px) + padding (12px * 2) = 34px
+  const controllerHeight = 34
+  // Final width: padding (20px * 2) + 5 indicators (4*10 + 48) + 4 gaps (4*12) = 176px
+  const controllerFinalWidth = 176
+
   const styles: Record<string, React.CSSProperties> = {
     container: {
       position: "relative",
@@ -128,27 +175,39 @@ export function IPhoneVideoGallery({
       justifyContent: "center",
       width: "100%",
       height: "100%",
+      overflow: "hidden",
+    },
+    scrollContainer: {
+      width: "100%",
+      flex: 1,
+      minHeight: 0,
+      overflowX: "scroll",
+      overflowY: "visible",
     },
     cardsArea: {
       position: "relative",
-      flex: 1,
-      width: "100%",
+      width: innerWidth,
+      height: "100%",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      cursor: "pointer",
     },
     cardWrapper: {
       position: "absolute",
     },
     controller: {
+      position: "absolute",
+      bottom: 0,
+      zIndex: 10,
       display: "flex",
       alignItems: "center",
+      justifyContent: "center",
       gap: 12,
       backgroundColor: "#3a3a3c",
       borderRadius: 30,
       padding: "12px 20px",
       marginBottom: 40,
+      overflow: "hidden",
     },
     indicatorBase: {
       position: "relative",
@@ -169,14 +228,16 @@ export function IPhoneVideoGallery({
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.cardsArea} onClick={() => setIsSpread(!isSpread)}>
-        {[0, 1, 2, 3, 4].map((index) => (
+    <div ref={containerRef} style={styles.container}>
+      <div style={styles.scrollContainer}>
+        <div style={styles.cardsArea}>
+          {[0, 1, 2, 3, 4].map((index) => (
           <motion.div
             key={index}
+            ref={cardRefs[index]}
             style={{
               ...styles.cardWrapper,
-              zIndex: isSpread
+              zIndex: isInView
                 ? spreadPositions[index].zIndex
                 : initialPositions[index].zIndex,
             }}
@@ -186,13 +247,13 @@ export function IPhoneVideoGallery({
               rotate: initialPositions[index].rotate,
             }}
             animate={{
-              x: isSpread
+              x: isInView
                 ? spreadPositions[index].x
                 : initialPositions[index].x,
-              y: isSpread
+              y: isInView
                 ? spreadPositions[index].y
                 : initialPositions[index].y,
-              rotate: isSpread
+              rotate: isInView
                 ? spreadPositions[index].rotate
                 : initialPositions[index].rotate,
             }}
@@ -201,7 +262,7 @@ export function IPhoneVideoGallery({
               stiffness: 97,
               damping: 16,
               mass: 1.1,
-              delay: isSpread ? index * 0.05 : (4 - index) * 0.05,
+              delay: isInView ? index * 0.05 : (4 - index) * 0.05,
             }}
           >
             <IPhoneVideoCard
@@ -212,20 +273,38 @@ export function IPhoneVideoGallery({
             />
           </motion.div>
         ))}
+        </div>
       </div>
 
-      <div style={styles.controller}>
+      <motion.div
+        style={styles.controller}
+        initial={{
+          width: controllerHeight,
+          scale: 0,
+        }}
+        animate={isInView ? {
+          width: controllerPhase === "circle" ? controllerHeight : controllerFinalWidth,
+          scale: controllerPhase === "circle" ? [0, 1.2, 1] : 1,
+        } : {
+          width: controllerHeight,
+          scale: 0,
+        }}
+        transition={{
+          width: { type: "spring", stiffness: 300, damping: 25 },
+          scale: { duration: 0.5, times: [0, 0.6, 1] },
+        }}
+      >
         {[0, 1, 2, 3, 4].map((index) => (
           <motion.div
             key={index}
             style={styles.indicatorBase}
             animate={{
               width: activeIndex === index ? 48 : 10,
+              opacity: controllerPhase === "visible" ? 1 : 0,
             }}
             transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 25,
+              width: { type: "spring", stiffness: 300, damping: 25 },
+              opacity: { duration: 0.2 },
             }}
             onClick={(e) => {
               e.stopPropagation()
@@ -233,16 +312,15 @@ export function IPhoneVideoGallery({
               setProgress(0)
             }}
           >
-            <motion.div
-              style={styles.progressFill}
-              animate={{
+            <div
+              style={{
+                ...styles.progressFill,
                 width: activeIndex === index ? `${progress * 100}%` : "0%",
               }}
-              transition={{ duration: 0.1 }}
             />
           </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   )
 }
