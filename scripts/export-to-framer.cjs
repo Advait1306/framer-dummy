@@ -3,16 +3,34 @@
 const fs = require("fs")
 const path = require("path")
 
+// Derive project root from script location (script is in scripts/, so go up one level)
+const scriptDir = __dirname
+const projectRoot = path.resolve(scriptDir, "..")
+
 // Get component file path from command line
 const componentPath = process.argv[2]
 
 if (!componentPath) {
-  console.error("Usage: node scripts/export-to-framer.cjs <component-file>")
-  console.error("Example: node scripts/export-to-framer.cjs src/components/IPhoneVideoCard.tsx")
+  console.error("Usage: npm run export <component-file>")
+  console.error("Example: npm run export src/components/IPhoneVideoCard.tsx")
   process.exit(1)
 }
 
-const fullPath = path.resolve(componentPath)
+// Resolve the component path:
+// - Absolute paths: use as-is
+// - Relative paths (./  ../): resolve from original working directory (INIT_CWD is set by npm)
+// - Other paths (e.g., src/components/...): resolve from project root
+const originalCwd = process.env.INIT_CWD || process.cwd()
+
+let fullPath
+if (path.isAbsolute(componentPath)) {
+  fullPath = componentPath
+} else if (componentPath.startsWith("./") || componentPath.startsWith("../")) {
+  fullPath = path.resolve(originalCwd, componentPath)
+} else {
+  fullPath = path.resolve(projectRoot, componentPath)
+}
+
 if (!fs.existsSync(fullPath)) {
   console.error(`File not found: ${fullPath}`)
   process.exit(1)
@@ -149,7 +167,7 @@ function processForFramer(content) {
 }
 
 // Create export directory in project root
-const exportDir = path.join(process.cwd(), "export")
+const exportDir = path.join(projectRoot, "export")
 if (!fs.existsSync(exportDir)) {
   fs.mkdirSync(exportDir, { recursive: true })
 }
