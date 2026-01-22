@@ -1,73 +1,90 @@
-# React + TypeScript + Vite
+# Framer Components Dev Environment
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A local development environment for building React components that are directly compatible with [Framer](https://framer.com). Build, preview, and test your components locally, then export them to Framer with auto-generated property controls.
 
-Currently, two official plugins are available:
+## Why?
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Framer's code editor is great, but developing complex components directly in it can be limiting. This environment gives you:
 
-## React Compiler
+- **Local development** with hot reload and proper IDE support
+- **Asset support** for testing with local images/videos
+- **Automatic export** that strips local assets and generates Framer property controls
+- **Type safety** with TypeScript
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Quick Start
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open `http://localhost:5173` to preview your components.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Creating Components
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+1. Create your component in `src/components/`
+2. Use the `local*` prefix for dev assets:
+
+```tsx
+import localVideo from "../assets/my-video.mp4"
+
+interface MyComponentProps {
+  videoSrc?: string
+  scale?: number
+}
+
+export function MyComponent({
+  videoSrc = localVideo,
+  scale = 1,
+}: MyComponentProps) {
+  // Your component...
+}
 ```
+
+3. Add to `src/App.tsx` to preview locally
+
+## Exporting to Framer
+
+```bash
+npm run export src/components/MyComponent.tsx
+```
+
+This generates `export/MyComponent.txt` ready to paste into Framer. The export script:
+
+- Removes local asset imports
+- Removes default values referencing local assets
+- Adds `addPropertyControls` with auto-detected control types
+- Outputs clean, Framer-ready code
+
+## Framer Compatibility Rules
+
+Components must follow these rules to work in Framer:
+
+- **Inline styles only** - no CSS files, CSS modules, or Tailwind
+- **Allowed imports**: `motion/react`, `react`, `framer`
+- **Self-contained** - single file, no local imports (except assets for dev)
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server |
+| `npm run export <file>` | Export component for Framer |
+| `npm run build` | Build for production |
+
+## Project Structure
+
+```
+├── src/
+│   ├── components/    # Your Framer components
+│   ├── assets/        # Local dev assets
+│   ├── App.tsx        # Component preview list
+│   └── main.tsx       # Entry point
+├── export/            # Generated Framer exports (.gitignored)
+└── scripts/
+    └── export-to-framer.cjs
+```
+
+## License
+
+MIT
