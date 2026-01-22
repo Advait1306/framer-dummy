@@ -2,8 +2,8 @@ import { motion } from "motion/react"
 import { useState, useRef, useEffect } from "react"
 import { IPhoneVideoCard } from "./iPhoneVideoCard"
 
-// Local dev assets
-import localVideo from "../assets/video-gallery/Test video.mp4"
+// Local dev assets (served from public folder)
+const localVideo = "/assets/video-gallery/Test video.mp4"
 
 interface IPhoneVideoGalleryProps {
   gap?: number
@@ -150,16 +150,8 @@ export function IPhoneVideoGallery({
       padding: "12px 20px",
       marginBottom: 40,
     },
-    indicator: {
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-      backgroundColor: "rgba(255, 255, 255, 0.4)",
-      cursor: "pointer",
-    },
-    activeIndicator: {
+    indicatorBase: {
       position: "relative",
-      width: 48,
       height: 10,
       borderRadius: 5,
       backgroundColor: "rgba(255, 255, 255, 0.4)",
@@ -224,19 +216,31 @@ export function IPhoneVideoGallery({
 
       <div style={styles.controller}>
         {[0, 1, 2, 3, 4].map((index) => (
-          <div
+          <motion.div
             key={index}
-            style={activeIndex === index ? styles.activeIndicator : styles.indicator}
+            style={styles.indicatorBase}
+            animate={{
+              width: activeIndex === index ? 48 : 10,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 25,
+            }}
             onClick={(e) => {
               e.stopPropagation()
               setActiveIndex(index)
               setProgress(0)
             }}
           >
-            {activeIndex === index && (
-              <div style={{ ...styles.progressFill, width: `${progress * 100}%` }} />
-            )}
-          </div>
+            <motion.div
+              style={styles.progressFill}
+              animate={{
+                width: activeIndex === index ? `${progress * 100}%` : "0%",
+              }}
+              transition={{ duration: 0.1 }}
+            />
+          </motion.div>
         ))}
       </div>
     </div>

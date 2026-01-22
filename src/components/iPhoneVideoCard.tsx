@@ -1,9 +1,9 @@
 import { motion } from "motion/react"
 import { RefObject } from "react"
 
-// Local dev assets
-import localFrame from "../assets/video-gallery/iPhone 16 Pro.png"
-import localVideo from "../assets/video-gallery/Test video.mp4"
+// Local dev assets (served from public folder)
+const localFrame = "/assets/video-gallery/iPhone 16 Pro.png"
+const localVideo = "/assets/video-gallery/Test video.mp4"
 
 interface IPhoneVideoCardProps {
   videoSrc?: string
