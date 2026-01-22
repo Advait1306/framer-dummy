@@ -1,4 +1,5 @@
 import { motion } from "motion/react"
+import { RefObject } from "react"
 
 // Local dev assets
 import localFrame from "../assets/video-gallery/iPhone 16 Pro.png"
@@ -9,6 +10,7 @@ interface IPhoneVideoCardProps {
   frameSrc?: string
   scale?: number
   index?: number
+  videoRef?: RefObject<HTMLVideoElement>
 }
 
 export function IPhoneVideoCard({
@@ -16,6 +18,7 @@ export function IPhoneVideoCard({
   frameSrc = localFrame,
   scale = 1,
   index,
+  videoRef,
 }: IPhoneVideoCardProps) {
   // Card dimensions
   const cardWidth = 408 * scale
@@ -89,12 +92,12 @@ export function IPhoneVideoCard({
       <motion.div style={styles.container}>
         <div style={styles.videoContainer}>
           <video
+            ref={videoRef}
             style={styles.video}
             src={videoSrc}
-            autoPlay
-            loop
             muted
             playsInline
+            preload="auto"
           />
         </div>
         {frameSrc && (

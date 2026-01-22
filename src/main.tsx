@@ -5,6 +5,7 @@ import App from './App.tsx'
 import { ExampleButton } from './components/ExampleButton'
 import { IPhoneVideoCard } from './components/iPhoneVideoCard'
 import { IPhoneVideoGallery } from './components/IPhoneVideoGallery'
+import { GalleryPage } from './pages/GalleryPage'
 
 function ComponentPage({ children }: { children: React.ReactNode }) {
   return (
@@ -39,7 +40,15 @@ function Router() {
   }
 
   if (route === '#/iphone-video-gallery') {
-    return <ComponentPage><IPhoneVideoGallery /></ComponentPage>
+    return (
+      <div style={{ width: '100vw', height: '100vh', backgroundColor: '#1a1a1a' }}>
+        <IPhoneVideoGallery />
+      </div>
+    )
+  }
+
+  if (route === '#/gallery-page') {
+    return <GalleryPage />
   }
 
   return <App />
