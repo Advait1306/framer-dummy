@@ -45,6 +45,9 @@ export function IPhoneVideoGallery({
   const [isInView, setIsInView] = useState(false);
   const isInViewRef = useRef(false);
 
+  // Separate state for visual animations (delays collapse until scroll completes)
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Track if anchor controller is visible (to switch from fixed to anchor)
   const [useFixedController, setUseFixedController] = useState(true);
   const anchorControllerRef = useRef<HTMLDivElement>(null);
@@ -135,17 +138,31 @@ export function IPhoneVideoGallery({
     return () => video.removeEventListener("ended", handleEnded);
   }, [activeIndex]);
 
-  // Controller intro animation sequence - starts when in view, resets when out of view
+  // Handle expand/collapse transitions with proper sequencing
   useEffect(() => {
-    if (!isInView) {
-      // Reset to initial state when leaving viewport
-      setControllerPhase("circle");
-      setActiveIndex(0);
-      setProgress(0);
-      // Reset horizontal scroll position
+    if (isInView) {
+      // Expand immediately when entering view
+      setIsExpanded(true);
+    } else {
+      // When leaving: first scroll, then collapse after scroll completes
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTo({ left: 0, behavior: "smooth" });
       }
+      // Delay collapse to allow scroll animation to complete (~300ms)
+      const collapseTimer = setTimeout(() => {
+        setIsExpanded(false);
+      }, 300);
+      return () => clearTimeout(collapseTimer);
+    }
+  }, [isInView]);
+
+  // Controller intro animation sequence - starts when expanded, resets when collapsed
+  useEffect(() => {
+    if (!isExpanded) {
+      // Reset to initial state when collapsed
+      setControllerPhase("circle");
+      setActiveIndex(0);
+      setProgress(0);
       return;
     }
 
@@ -163,7 +180,7 @@ export function IPhoneVideoGallery({
       clearTimeout(expandTimer);
       clearTimeout(visibleTimer);
     };
-  }, [isInView]);
+  }, [isExpanded]);
 
   // Track scroll to switch between fixed and anchor controller
   useEffect(() => {
@@ -174,10 +191,16 @@ export function IPhoneVideoGallery({
       const anchorRect = anchor.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
       const fixedBottomOffset = 40;
+      const anchorPaddingTop = 40;
+
+      // Fixed controller top position from viewport top
       const fixedControllerTop = viewportHeight - fixedBottomOffset - controllerHeight;
 
-      // Switch to anchor when anchor's top reaches or passes the fixed controller's top
-      const shouldUseAnchor = anchorRect.top <= fixedControllerTop;
+      // Anchor's actual controller pill is anchorPaddingTop below the wrapper's top
+      const anchorControllerTop = anchorRect.top + anchorPaddingTop;
+
+      // Switch to anchor when anchor's pill reaches the fixed controller's position
+      const shouldUseAnchor = anchorControllerTop <= fixedControllerTop;
 
       setUseFixedController(!shouldUseAnchor);
     };
@@ -299,11 +322,10 @@ export function IPhoneVideoGallery({
       zIndex: 10,
     },
     anchorControllerWrapper: {
-      position: "absolute",
-      bottom: 40,
-      left: "50%",
-      transform: "translateX(-50%)",
-      zIndex: 10,
+      display: "flex",
+      justifyContent: "center",
+      paddingTop: 40,
+      paddingBottom: 40,
     },
     controller: {
       display: "flex",
@@ -343,7 +365,7 @@ export function IPhoneVideoGallery({
               ref={cardRefs[index]}
               style={{
                 ...styles.cardWrapper,
-                zIndex: isInView
+                zIndex: isExpanded
                   ? spreadPositions[index].zIndex
                   : initialPositions[index].zIndex,
               }}
@@ -353,13 +375,13 @@ export function IPhoneVideoGallery({
                 rotate: initialPositions[index].rotate,
               }}
               animate={{
-                x: isInView
+                x: isExpanded
                   ? spreadPositions[index].x
                   : initialPositions[index].x,
-                y: isInView
+                y: isExpanded
                   ? spreadPositions[index].y
                   : initialPositions[index].y,
-                rotate: isInView
+                rotate: isExpanded
                   ? spreadPositions[index].rotate
                   : initialPositions[index].rotate,
               }}
@@ -368,7 +390,7 @@ export function IPhoneVideoGallery({
                 stiffness: 97,
                 damping: 16,
                 mass: 1.1,
-                delay: isInView ? index * 0.05 : (4 - index) * 0.05,
+                delay: isExpanded ? index * 0.05 : (4 - index) * 0.05,
               }}
             >
               <IPhoneVideoCard
@@ -397,7 +419,7 @@ export function IPhoneVideoGallery({
             scale: 0,
           }}
           animate={
-            isInView
+            isExpanded
               ? {
                   width:
                     controllerPhase === "circle"
@@ -459,7 +481,7 @@ export function IPhoneVideoGallery({
             scale: 0,
           }}
           animate={
-            isInView
+            isExpanded
               ? {
                   width:
                     controllerPhase === "circle"
