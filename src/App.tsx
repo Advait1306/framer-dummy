@@ -6,12 +6,27 @@ const components = [
   { name: 'IPhoneVideoGallery', path: 'iphone-video-gallery' },
 ]
 
+const pages = [
+  { name: 'Gallery Page', path: 'gallery-page' },
+]
+
 function App() {
   return (
     <div style={styles.container}>
       <h1 style={styles.title}>Components</h1>
       <ul style={styles.list}>
         {components.map((item) => (
+          <li key={item.name} style={styles.item}>
+            <a href={`#/${item.path}`} style={styles.link}>
+              {item.name}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <h1 style={{ ...styles.title, marginTop: '48px' }}>Pages</h1>
+      <ul style={styles.list}>
+        {pages.map((item) => (
           <li key={item.name} style={styles.item}>
             <a href={`#/${item.path}`} style={styles.link}>
               {item.name}
